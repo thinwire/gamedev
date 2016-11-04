@@ -2,6 +2,8 @@
 // Game Engine
 //
 
+/// <reference path="math.ts" />
+
 enum Keys {
     LEFT = 37,
     RIGHT =  39,
@@ -12,36 +14,100 @@ enum Keys {
 
 class Sprite {
 
-    public x: number;
-    public y: number;
-    public w: number;
-    public h: number;
-    public scale: number;
-    public image: HTMLImageElement;
+    protected position: Vec2;
+    protected size: Vec2;
+    protected scale: number;
+    protected image: HTMLImageElement;
 
     constructor(imageName: string) {
         this.image = <HTMLImageElement>document.getElementById(imageName);
-        this.x = 0;
-        this.y = 0;
-        this.w = this.image.width;
-        this.h = this.image.height;
+        this.position = new Vec2();
+        this.size = new Vec2(this.image.width,this.image.height);
         this.scale = 1;
     }
 
-    public move(dx: number, dy: number): void {
-        this.x += dx;
-        this.y += dy;
+    public getImage(): HTMLImageElement {
+        return this.image;
+    }
+
+    public getX(): number {
+        return this.position.x;
+    }
+    
+    public getY(): number {
+        return this.position.y;
+    }
+
+    public getWidth(): number {
+        return this.size.x;
+    }
+
+    public getHeight(): number {
+        return this.size.y;
+    }
+
+    public getSize(): Vec2 {
+        return this.size;
+    }
+
+    public placeAt(sprite: Sprite): void {
+        this.position.set(sprite.position);
     }
 
     public setPosition(x: number, y: number): void {
-        this.x = x;
-        this.y = y;
+        this.position.setXY(x,y);
+    }
+
+    public getPosition(): Vec2 {
+        return this.position;
+    }
+
+    public move(dx: number, dy: number): void {
+        this.position.addXY(dx,dy);
     }
 
     public setScale(s: number): void {
         this.scale = s;
     }
 
+    public getScale(): number {
+        return this.scale;
+    }
+
+}
+
+class Timer {
+    private current: number;
+    private last: number;
+    private delta: number;
+
+    constructor() {
+        this.current = 0;
+        this.last = 0;
+        this.delta = 0;
+    }
+
+    public getCurrent(): number {
+        return this.current;
+    }
+
+    public getLast(): number {
+        return this.last;
+    }
+
+    public getDelta(): number {
+        return this.delta;
+    }
+
+    public update(timestamp: number): void {
+        this.delta = timestamp - this.current;
+        this.last = this.current;
+        this.current = timestamp;
+        if(this.delta > 1000) {
+            this.delta = 0;
+        }
+        this.delta *= 0.001;
+    }
 }
 
 class Scene {
@@ -49,18 +115,24 @@ class Scene {
     private context: CanvasRenderingContext2D;
     private sprites: Sprite[];
 
+    private width: number;
+    private height: number;
+
     private keys: boolean[];
     private mousex: number;
     private mousey: number;
     private mouseb: boolean;
 
-    public constructor(doc:HTMLElement) {
+    public constructor(doc: HTMLElement) {
         this.keys = [];
         this.sprites = [];
         this.canvas = doc.getElementsByTagName('canvas')[0];
         this.canvas.width = this.canvas.offsetWidth;
         this.canvas.height = this.canvas.offsetHeight;
         this.context = this.canvas.getContext('2d');
+
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
 
         //
         // Input system
@@ -131,88 +203,29 @@ class Scene {
         }
     }
 
+    public getWidth(): number {
+        return this.width;
+    }
+
+    public getHeight(): number {
+        return this.height;
+    }
+
     public update(): void {
         // Clear the canvas
         this.context.fillStyle = "rgba(0,0,0,1)";
-        this.context.fillRect(0,0,this.canvas.width,this.canvas.height);
+        this.context.fillRect(0,0,this.width,this.height);
 
         // Draw all sprites
         for(var i = 0; i < this.sprites.length; ++i) {
             var s = this.sprites[i];
-            this.context.drawImage(s.image,0,0,s.w,s.h,s.x,s.y,s.w * s.scale,s.h * s.scale);
+
+            var image = s.getImage();
+            var position = s.getPosition();
+            var size = s.getSize();
+            var scale = s.getScale();
+
+            this.context.drawImage(image,0,0,size.x,size.y,position.x,position.y,size.x * scale,size.y * scale);
         }
     }
 }
-
-//
-// The actual game
-//
-
-class Game {
-
-    private scene: Scene;       // Scene handles drawing sprites onto the canvas
-    private tm_last: number;    // Value used for timing
-
-    // "Dude", our hero character
-    private dude: Sprite;
-    private ddx: number = 0;
-    private ddy: number = 0;
-
-    constructor() {
-        this.scene = new Scene(window.document.body);
-        this.dude = new Sprite("dude");
-        this.scene.addSprite(this.dude);
-        this.tm_last = 0;
-    }
-
-    public update(tm: number): void {
-
-        // Update timing
-        var delta = (tm - this.tm_last) / 1000;
-        if(delta >= 1) delta = 0;   // Ignore absurdly high delta times (delta should be below 0.2 in normal cases)
-        this.tm_last = tm;
-        
-        //
-        // Game logic
-        //
-
-        var dx: number = 0;
-        var dy: number = 0;
-
-        // Check input
-        if(this.scene.isKeyDown(Keys.LEFT)) dx -= 100;
-        if(this.scene.isKeyDown(Keys.RIGHT)) dx += 100;
-        if(this.scene.isKeyDown(Keys.UP)) dy -= 100;
-        if(this.scene.isKeyDown(Keys.DOWN)) dy += 100;
-
-        // Update dude's speed delta components
-        this.ddx += dx * delta;
-        this.ddy += dy * delta;
-
-        if(dx == 0) this.ddx *= 0.70;       // TODO: use better linear reduction algorithm
-        if(dy == 0) this.ddy *= 0.70;       // TODO: ditto
-
-        this.dude.move(this.ddx,this.ddy);
-
-        // Limit dude to scene.
-        // TODO: query values instead of using hardcoded limits
-        if(this.dude.x < 0) this.dude.x = 0;
-        if(this.dude.y < 0) this.dude.y = 0;
-        if(this.dude.x > 800 - 64) this.dude.x = 800 - 64;
-        if(this.dude.y > 600 - 64) this.dude.y = 600 - 64;
-
-        // Draw our scene
-        this.scene.update();
-    }
-}
-
-//
-// Bootstrap - this starts up and keeps the game running
-//
-
-var g = new Game();
-var loop = (tm) => {
-    g.update(tm);
-    requestAnimationFrame(loop);
-};
-requestAnimationFrame(loop);

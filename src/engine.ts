@@ -115,6 +115,7 @@ class Scene {
     private context: CanvasRenderingContext2D;
     private sprites: Sprite[];
 
+    private bounds: Rect;
     private width: number;
     private height: number;
 
@@ -133,6 +134,7 @@ class Scene {
 
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+        this.bounds = new Rect(0,0,this.width,this.height);
 
         //
         // Input system
@@ -201,6 +203,10 @@ class Scene {
         if(idx >= 0) {
             this.sprites.splice(idx);
         }
+    }
+
+    public getBounds(): Rect {
+        return this.bounds;
     }
 
     public getWidth(): number {

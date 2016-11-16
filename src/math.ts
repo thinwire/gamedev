@@ -164,6 +164,13 @@ class Rect {
         return xtest && ytest;
     }
 
+    public getRandomPoint(): Vec2 {
+        var v = new Vec2();
+        v.x = this.position.x + Math.random() * this.size.x;
+        v.y = this.position.y + Math.random() * this.size.y;
+        return v;
+    }
+
     public intersectsCircle(c: Circle): boolean {
         // TODO: implement
         return false;

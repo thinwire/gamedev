@@ -32,58 +32,85 @@ class Ringbuffer<T> {
     }
 }
 
-class Game {
+class Actor {
+    protected sprite: Sprite;
+    protected bounds: Rect;
+    protected alive: boolean;
+    protected scene: Scene;
 
-    // Scene and main timing
-    private scene: Scene;    // Scene handles drawing sprites onto the canvas
-    private timer: Timer;    // No longer a raw timing value; Timer can be found in engine.ts
-
-    // "Dude", our hero character
-    private dude: Sprite;
-    private ddx: number = 0;
-    private ddy: number = 0;
-
-    // Laser control objects
-    private laserBuffer: Ringbuffer<Sprite>;
-    private laserTimer: number; // Counts the amount of time between shots
-
-    constructor() {
-        this.scene = new Scene(window.document.body);
-        this.timer = new Timer();
-
-        // Create lasers in a buffer
-        this.laserTimer = 0;
-        this.laserBuffer = new Ringbuffer(16, () => {
-            var laser = new Sprite("laser");
-            laser.setPosition(9000,9000);
-            this.scene.addSprite(laser);
-            return laser;
-        });
-        
-        // Create player sprite
-        this.dude = new Sprite("dude");
-        this.dude.setPosition(15, (this.scene.getHeight() - this.dude.getHeight()) * 0.5);
-        this.scene.addSprite(this.dude);
+    constructor(spriteName: string) {
+        this.sprite = new Sprite(spriteName);
+        this.bounds = new Rect(0,0,this.sprite.getWidth(),this.sprite.getHeight());
+        this.alive = false;
     }
 
-    public update(tm: number): void {
+    public isAlive(): boolean {
+        return this.alive;
+    }
 
-        // Update timing
-        this.timer.update(tm);
-        var delta = this.timer.getDelta();
+    public setAlive(b: boolean): void {
+        this.alive = b;
+    }
 
-        //
-        // Laser Logic
-        //
+    public addTo(scene: Scene): void {
+        this.scene = scene;
+        scene.addSprite(this.sprite);
+    }
 
-        this.laserBuffer.update((laser: Sprite) => {
-            laser.move(700 * delta, 0);
-        });
+    public getBounds():Rect {
+        return this.bounds;
+    }
 
-        //
-        // Dude logic
-        //
+    public getWidth(): number {
+        return this.sprite.getWidth();
+    }
 
+    public getHeight(): number {
+        return this.sprite.getHeight();
+    }
+
+    public getPosition(): Vec2 {
+        return this.sprite.getPosition();
+    }
+
+    public setPosition(x:number, y:number):void {
+        this.sprite.setPosition(x,y);
+        this.bounds.position.setXY(x,y);
+    }
+
+    public move(dx:number, dy:number):void {
+        this.sprite.move(dx,dy);
+        var p = this.bounds.position;
+        this.bounds.position.setXY(p.x + dx, p.y + dy);
+    }
+
+    public update(delta: number): void {
+    }
+
+}
+
+class Player extends Actor {
+
+    private ddx: number;
+    private ddy: number;
+
+    private laserBuffer: Ringbuffer<Bullet>;
+    private laserTimer: number;
+
+    constructor() {
+        super("dude");
+        this.ddx = 0;
+        this.ddy = 0;
+        this.laserTimer = 0;
+        this.laserBuffer = new Ringbuffer(16,() => {
+            var laser = new Bullet();
+            laser.setPosition(9000,9000);
+            return laser;
+        })
+        this.setAlive(true);
+    }
+
+    public update(delta: number): void {
         // Check input
         var dx: number = 0;
         var dy: number = 0;
@@ -100,28 +127,99 @@ class Game {
         if(dx == 0) this.ddx *= 0.70;       // TODO: use better linear reduction algorithm
         if(dy == 0) this.ddy *= 0.70;       // TODO: ditto
 
-        this.dude.move(this.ddx,this.ddy);
+        this.move(this.ddx,this.ddy);
 
         // Limit dude to scene.
         var minX = 0;
         var minY = 0;
-        var maxX = this.scene.getWidth() - this.dude.getWidth();
-        var maxY = this.scene.getHeight() - this.dude.getHeight();
+        var maxX = this.scene.getWidth() - this.getWidth();
+        var maxY = this.scene.getHeight() - this.getHeight();
 
-        if(this.dude.getX() < minX) { this.dude.getPosition().x = minX; this.ddx = 0; }
-        if(this.dude.getY() < minY) { this.dude.getPosition().y = minY; this.ddy = 0; }
-        if(this.dude.getX() > maxX) { this.dude.getPosition().x = maxX; this.ddx = 0; }
-        if(this.dude.getY() > maxY) { this.dude.getPosition().y = maxY; this.ddy = 0; }
+        if(this.sprite.getX() < minX) { this.getPosition().x = minX; this.ddx = 0; }
+        if(this.sprite.getY() < minY) { this.getPosition().y = minY; this.ddy = 0; }
+        if(this.sprite.getX() > maxX) { this.getPosition().x = maxX; this.ddx = 0; }
+        if(this.sprite.getY() > maxY) { this.getPosition().y = maxY; this.ddy = 0; }
 
         // Make dude shoot laser when space is pressed
         if(this.scene.isKeyDown(Keys.SPACE)) {
             if(this.laserTimer < 0) {
+                /*
                 var laser = this.laserBuffer.getNext();
                 laser.placeAt(this.dude);
+                */
+                console.log("fire!");
                 this.laserTimer = 0.5;
             }
         }
         this.laserTimer -= delta;
+    }
+}
+
+class Enemy extends Actor {
+    constructor() {
+        super("enemy");
+    }
+
+    public update(delta: number): void {
+        this.move(-300 * delta, 0);
+        if(!this.getBounds().intersectsRect(this.scene.getBounds())) {
+            var p = this.scene.getBounds().getRandomPoint();
+            this.setPosition(800 + 60, p.y);
+        }
+    }
+}
+
+class Bullet extends Actor {
+    constructor() {
+        super("laser");
+    }
+
+    public update(delta: number): void {
+        this.move(700 * delta, 0);
+    }
+}
+
+class Game {
+
+    // Scene and main timing
+    private scene: Scene;    // Scene handles drawing sprites onto the canvas
+    private timer: Timer;    // No longer a raw timing value; Timer can be found in engine.ts
+
+    private actors: Actor[];
+    private player: Player;
+    private enemies: Ringbuffer<Enemy>;
+
+    constructor() {
+        this.scene = new Scene(window.document.body);
+        this.timer = new Timer();
+
+        this.actors = [];
+        this.player = new Player();
+        this.enemies = new Ringbuffer(8, () => {
+            var e = new Enemy();
+            var p = this.scene.getBounds().getRandomPoint();
+            e.setPosition(p.x,p.y);
+            return e;
+        });
+        
+        this.addActor(this.player);
+    }
+
+    private addActor(a: Actor) {
+        this.actors.push(a);
+        a.addTo(this.scene);
+    } 
+
+    public update(tm: number): void {
+
+        // Update timing
+        this.timer.update(tm);
+        var delta = this.timer.getDelta();
+
+        // Update all actors
+        for(var a in this.actors) {
+            this.actors[a].update(delta);
+        }
 
         // Draw our scene
         this.scene.update();

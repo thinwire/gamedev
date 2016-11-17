@@ -106,6 +106,10 @@ class Player extends Actor {
             return laser;
         })
         this.setAlive(true);
+
+        // XXX: get rid of hardcoded position value, calculate proper position
+        // in future spawn() method
+        this.setPosition(15,300 - 32);
     }
 
     public update(delta: number): void {

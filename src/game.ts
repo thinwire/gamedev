@@ -144,15 +144,15 @@ class Player extends Actor {
         this.move(this.inertia.x,this.inertia.y);
 
         // Limit dude to scene.
-        var minX = 0;
-        var minY = 0;
-        var maxX = this.scene.getWidth() - this.getWidth();
-        var maxY = this.scene.getHeight() - this.getHeight();
-
-        if(this.sprite.getX() < minX) { this.getPosition().x = minX; this.inertia.x = 0; }
-        if(this.sprite.getY() < minY) { this.getPosition().y = minY; this.inertia.y = 0; }
-        if(this.sprite.getX() > maxX) { this.getPosition().x = maxX; this.inertia.x = 0; }
-        if(this.sprite.getY() > maxY) { this.getPosition().y = maxY; this.inertia.y = 0; }
+        var sceneBounds = this.scene.getBounds();
+        var myBounds = this.getBounds();
+        if(sceneBounds.confineX(myBounds)) {
+            this.inertia.x = 0;
+        }
+        if(sceneBounds.confineY(myBounds)) {
+            this.inertia.y = 0;
+        }
+        this.setPosition(myBounds.position.x,myBounds.position.y);
 
         // Make dude shoot laser when space is pressed
         if(this.scene.isKeyDown(Keys.SPACE)) {

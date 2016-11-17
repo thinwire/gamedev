@@ -2,6 +2,16 @@
 // Math routines
 //
 
+/**
+ * Linearily move towards zero from value by amount
+ */
+function toZero(value: number, amount: number): number {
+    if((Math.abs(value) - amount) < 0) return 0;
+    if(value > 0) value -= amount;
+    else value += amount;
+    return value;
+}
+
 class Vec2 {
 
     public x: number;

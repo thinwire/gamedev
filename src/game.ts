@@ -91,16 +91,14 @@ class Actor {
 
 class Player extends Actor {
 
-    private ddx: number;
-    private ddy: number;
+    private inertia: Vec2;
 
     private laserBuffer: Ringbuffer<Bullet>;
     private laserTimer: number;
 
     constructor() {
         super("dude");
-        this.ddx = 0;
-        this.ddy = 0;
+        this.inertia = new Vec2();
         this.laserTimer = 0;
         this.laserBuffer = new Ringbuffer(16,() => {
             var laser = new Bullet();
@@ -111,23 +109,39 @@ class Player extends Actor {
     }
 
     public update(delta: number): void {
+
+        // Define speed constants
+        const maxspeed: number = 15;
+        const friction: number = 70;
+
         // Check input
         var dx: number = 0;
         var dy: number = 0;
-
         if(this.scene.isKeyDown(Keys.LEFT)) dx -= 100;
         if(this.scene.isKeyDown(Keys.RIGHT)) dx += 100;
         if(this.scene.isKeyDown(Keys.UP)) dy -= 100;
         if(this.scene.isKeyDown(Keys.DOWN)) dy += 100;
 
         // Update dude's speed delta components
-        this.ddx += dx * delta;
-        this.ddy += dy * delta;
+        if(dx == 0) {
+            this.inertia.x = toZero(this.inertia.x, friction * delta);
+        } else {
+            this.inertia.x += dx * delta;
+        }
 
-        if(dx == 0) this.ddx *= 0.70;       // TODO: use better linear reduction algorithm
-        if(dy == 0) this.ddy *= 0.70;       // TODO: ditto
+        if(dy == 0) {
+            this.inertia.y = toZero(this.inertia.y, friction * delta);
+        } else {
+            this.inertia.y += dy * delta;
+        }
 
-        this.move(this.ddx,this.ddy);
+        // Clamp inertia to maximum speed
+        if(this.inertia.length() > maxspeed) {
+            this.inertia.normalize().multiplyXY(maxspeed);
+        }
+
+        // Move according to inertia vector
+        this.move(this.inertia.x,this.inertia.y);
 
         // Limit dude to scene.
         var minX = 0;
@@ -135,10 +149,10 @@ class Player extends Actor {
         var maxX = this.scene.getWidth() - this.getWidth();
         var maxY = this.scene.getHeight() - this.getHeight();
 
-        if(this.sprite.getX() < minX) { this.getPosition().x = minX; this.ddx = 0; }
-        if(this.sprite.getY() < minY) { this.getPosition().y = minY; this.ddy = 0; }
-        if(this.sprite.getX() > maxX) { this.getPosition().x = maxX; this.ddx = 0; }
-        if(this.sprite.getY() > maxY) { this.getPosition().y = maxY; this.ddy = 0; }
+        if(this.sprite.getX() < minX) { this.getPosition().x = minX; this.inertia.x = 0; }
+        if(this.sprite.getY() < minY) { this.getPosition().y = minY; this.inertia.y = 0; }
+        if(this.sprite.getX() > maxX) { this.getPosition().x = maxX; this.inertia.x = 0; }
+        if(this.sprite.getY() > maxY) { this.getPosition().y = maxY; this.inertia.y = 0; }
 
         // Make dude shoot laser when space is pressed
         if(this.scene.isKeyDown(Keys.SPACE)) {

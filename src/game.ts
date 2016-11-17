@@ -33,55 +33,63 @@ class Ringbuffer<T> {
 }
 
 class Actor {
-    protected sprite: Sprite;
-    protected bounds: Rect;
-    protected alive: boolean;
-    protected scene: Scene;
+    private _actor_sprite: Sprite;
+    private _actor_bounds: Rect;
+    private _actor_alive: boolean;
+    private _actor_scene: Scene;
 
     constructor(spriteName: string) {
-        this.sprite = new Sprite(spriteName);
-        this.bounds = new Rect(0,0,this.sprite.getWidth(),this.sprite.getHeight());
-        this.alive = false;
+        this._actor_sprite = new Sprite(spriteName);
+        this._actor_bounds = new Rect(0,0,this._actor_sprite.getWidth(),this._actor_sprite.getHeight());
+        this._actor_alive = false;
     }
 
     public isAlive(): boolean {
-        return this.alive;
+        return this._actor_alive;
     }
 
     public setAlive(b: boolean): void {
-        this.alive = b;
+        this._actor_alive = b;
     }
 
     public addTo(scene: Scene): void {
-        this.scene = scene;
-        scene.addSprite(this.sprite);
+        this._actor_scene = scene;
+        scene.addSprite(this._actor_sprite);
     }
 
-    public getBounds():Rect {
-        return this.bounds;
+    public getScene(): Scene {
+        return this._actor_scene;
+    }
+
+    public getSprite(): Sprite {
+        return this._actor_sprite;
+    }
+
+    public getBounds(): Rect {
+        return this._actor_bounds;
     }
 
     public getWidth(): number {
-        return this.sprite.getWidth();
+        return this._actor_sprite.getWidth();
     }
 
     public getHeight(): number {
-        return this.sprite.getHeight();
+        return this._actor_sprite.getHeight();
     }
 
     public getPosition(): Vec2 {
-        return this.sprite.getPosition();
+        return this._actor_sprite.getPosition();
     }
 
     public setPosition(x:number, y:number):void {
-        this.sprite.setPosition(x,y);
-        this.bounds.position.setXY(x,y);
+        this._actor_sprite.setPosition(x,y);
+        this._actor_bounds.position.setXY(x,y);
     }
 
     public move(dx:number, dy:number):void {
-        this.sprite.move(dx,dy);
-        var p = this.bounds.position;
-        this.bounds.position.setXY(p.x + dx, p.y + dy);
+        this._actor_sprite.move(dx,dy);
+        var p = this._actor_bounds.position;
+        this._actor_bounds.position.setXY(p.x + dx, p.y + dy);
     }
 
     public update(delta: number): void {
@@ -121,10 +129,11 @@ class Player extends Actor {
         // Check input
         var dx: number = 0;
         var dy: number = 0;
-        if(this.scene.isKeyDown(Keys.LEFT)) dx -= 100;
-        if(this.scene.isKeyDown(Keys.RIGHT)) dx += 100;
-        if(this.scene.isKeyDown(Keys.UP)) dy -= 100;
-        if(this.scene.isKeyDown(Keys.DOWN)) dy += 100;
+        var scene = this.getScene();
+        if(scene.isKeyDown(Keys.LEFT)) dx -= 100;
+        if(scene.isKeyDown(Keys.RIGHT)) dx += 100;
+        if(scene.isKeyDown(Keys.UP)) dy -= 100;
+        if(scene.isKeyDown(Keys.DOWN)) dy += 100;
 
         // Update dude's speed delta components
         if(dx == 0) {
@@ -148,7 +157,7 @@ class Player extends Actor {
         this.move(this.inertia.x,this.inertia.y);
 
         // Limit dude to scene.
-        var sceneBounds = this.scene.getBounds();
+        var sceneBounds = scene.getBounds();
         var myBounds = this.getBounds();
         if(sceneBounds.confineX(myBounds)) {
             this.inertia.x = 0;
@@ -159,7 +168,7 @@ class Player extends Actor {
         this.setPosition(myBounds.position.x,myBounds.position.y);
 
         // Make dude shoot laser when space is pressed
-        if(this.scene.isKeyDown(Keys.SPACE)) {
+        if(scene.isKeyDown(Keys.SPACE)) {
             if(this.laserTimer < 0) {
                 /*
                 var laser = this.laserBuffer.getNext();
@@ -179,9 +188,10 @@ class Enemy extends Actor {
     }
 
     public update(delta: number): void {
+        var scene = this.getScene();
         this.move(-300 * delta, 0);
-        if(!this.getBounds().intersectsRect(this.scene.getBounds())) {
-            var p = this.scene.getBounds().getRandomPoint();
+        if(!this.getBounds().intersectsRect(scene.getBounds())) {
+            var p = scene.getBounds().getRandomPoint();
             this.setPosition(800 + 60, p.y);
         }
     }

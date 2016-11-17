@@ -12,6 +12,12 @@ function toZero(value: number, amount: number): number {
     return value;
 }
 
+function clamp(value: number, min: number, max: number): number {
+    if(value < min) return min;
+    if(value > max) return max;
+    return value;
+}
+
 class Vec2 {
 
     public x: number;
@@ -179,6 +185,35 @@ class Rect {
         v.x = this.position.x + Math.random() * this.size.x;
         v.y = this.position.y + Math.random() * this.size.y;
         return v;
+    }
+
+    /**
+     * Modify a Rect object so that it's contained inside this Rect.
+     * @return true if parameter Rect was modified
+     */
+    public confine(r: Rect): boolean {
+        var cx = this.confineX(r);
+        return this.confineY(r) || cx;
+    }
+
+    /**
+     * Modify a Rect object's X positionc omponent so that it's contained inside this Rect.
+     * @return true if parameter Rect was modified
+     */
+    public confineX(r: Rect): boolean {
+        var x = r.position.x;
+        r.position.x = clamp(x,this.position.x,this.position.x + this.size.x - r.size.x);
+        return x != r.position.x;
+    }
+
+    /**
+     * Modify a Rect object's Y position component so that it's contained inside this Rect.
+     * @return true if parameter Rect was modified
+     */
+    public confineY(r: Rect): boolean {
+        var y = r.position.y;
+        r.position.y = clamp(y,this.position.y,this.position.y + this.size.y - r.size.y);
+        return y != r.position.y;
     }
 
     public intersectsCircle(c: Circle): boolean {
